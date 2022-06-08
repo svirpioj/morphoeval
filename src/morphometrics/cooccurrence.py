@@ -22,6 +22,17 @@ class MorphSeq(list):
         """Return morph counts"""
         return collections.Counter(self)
 
+    def boundaries(self):
+        """Return boundary vector (0 = no boundary, 1 = boundary)"""
+        vsize = len(''.join(self)) - 1
+        vect = np.zeros(vsize, dtype=int)
+        idx = -1
+        for morph in self:
+            idx += len(morph)
+            if idx < vsize:
+                vect[idx] = 1
+        return vect
+
 
 class AnalysisSet:
     """Morphological analyses for a set of words"""

@@ -2,18 +2,24 @@
 
 ## Introduction
 
-This package provides re-implementations for the CoMMA and EMMA-2
-evaluation methods introduced by Virpioja et al. (2011). The methods
-are designed for the task of unsupervised morphological analysis that
-was the goal in the Morpho Challenge competitions organized between
-2005 and 2010 (see Kurimo et al., 2010).
+This package provides re-implementations for the BPR, CoMMA, and
+EMMA-2 evaluation methods for unsupervised morphological analysis and
+segmentation introduced by Virpioja et al. (2011).
 
-The challenge in the evaluation of unsupervised morphological analysis
-is that the predicted morphemes labels and the labels in gold standard
-analysis are not directly comparable, as an unsupervised algorithm
-does not see the gold standard labels, and in contrast to unsupervised
-morphological segmentation, the labels are not simply subsequences of
-words.
+The BPR (boundary precision and recall) method calculates a
+macro-average of the segmentation boundary matches over the words and
+is thus suitable for evaluating unsupervised or supervised
+morphological segmentation.
+
+The CoMMA and EMMA-2 methods are designed for the task of unsupervised
+morphological analysis that was the goal in the Morpho Challenge
+competitions organized between 2005 and 2010 (see Kurimo et al.,
+2010). The challenge in the evaluation of unsupervised morphological
+analysis is that the predicted morphemes labels and the labels in gold
+standard analysis are not directly comparable, as an unsupervised
+algorithm does not see the gold standard labels, and in contrast to
+unsupervised morphological segmentation, the labels are not simply
+subsequences of words.
 
 Both methods start with a bipartite morpheme-word graph that collects
 the occurrences of the morphemes in the word forms within the test
@@ -31,9 +37,10 @@ Installing the package provides a single command, `morphometrics`:
 
 ```
 $ morphometrics --help
-usage: morphometrics [-h] [--metric {comma-b0,comma-b1,emma-2}] [--verbose] goldfile predfile [output]
+usage: morphometrics [-h] [--metric {comma-b0,comma-b1,emma-2,bpr}] [--verbose]
+                     goldfile predfile [output]
 
-Metrics for unsupervised morphological analysis
+Metrics for morphological analysis and segmentation
 
 positional arguments:
   goldfile              gold standard analysis file
@@ -42,7 +49,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --metric {comma-b0,comma-b1,emma-2}, -m {comma-b0,comma-b1,emma-2}
+  --metric {comma-b0,comma-b1,emma-2,bpr}, -m {comma-b0,comma-b1,emma-2,bpr}
                         metric (default comma-b0)
   --verbose, -v         increase verbosity
 ```
@@ -79,8 +86,8 @@ http://morpho.aalto.fi/events/morphochallenge/, but do not work with
 modern Python versions. The current implementation has the following
 limitations compared to the previous scripts:
 
-- CoMMA versions with strict matching of alternative analyses
-  (CoMMA-S0, CoMMA-S1) are not implemented.
+- BPR and CoMMA versions (CoMMA-S0, CoMMA-S1) with strict matching of
+  alternative analyses are not implemented.
 - The original EMMA algorithm with one-to-one mapping between
   morphemes is not supported.
 - Weighting of each input word is not supported.

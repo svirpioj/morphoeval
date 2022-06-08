@@ -6,7 +6,7 @@ import logging
 
 import ruamel.yaml
 
-from . import AnalysisSet, comma, emma2
+from . import AnalysisSet, comma, emma2, bpr
 
 
 logger = logging.getLogger(__name__)
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main method"""
-    parser = argparse.ArgumentParser(description='Metrics for unsupervised morphological analysis')
-    parser.add_argument('--metric', '-m', choices=['comma-b0', 'comma-b1', 'emma-2'],
+    parser = argparse.ArgumentParser(description='Metrics for morphological analysis and segmentation')
+    parser.add_argument('--metric', '-m', choices=['comma-b0', 'comma-b1', 'emma-2', 'bpr'],
                         default='comma-b0', help='metric (default %(default)s)')
     parser.add_argument('--verbose', '-v', action='store_true', help='increase verbosity')
     parser.add_argument('goldfile', type=argparse.FileType('r'), help='gold standard analysis file')
@@ -32,8 +32,10 @@ def main():
         pre, rec = emma2(goldlist, predlist)
     elif args.metric == 'comma-b1':
         pre, rec = comma(goldlist, predlist, diagonals=True)
-    else:
+    elif args.metric == 'comma-b0':
         pre, rec = comma(goldlist, predlist, diagonals=False)
+    else:
+        pre, rec = bpr(goldlist, predlist)
     fscore = 2 * pre * rec / (pre + rec)
     ruamel_yaml = ruamel.yaml.YAML(typ='safe', pure=True)
     ruamel_yaml.dump({

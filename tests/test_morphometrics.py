@@ -192,3 +192,112 @@ class TestEMMA2(unittest.TestCase):
         pre, rec = emma2(goldlist, predlist)
         self.assertAlmostEqual(pre, 0.91666666667)
         self.assertAlmostEqual(rec, 0.9375)
+
+
+class TestBPR(unittest.TestCase):
+    """Test the boundary precision and recall evaluation"""
+
+    reference = {
+        'koira': ['koira'],
+        'koiran': ['koira', 'n'],
+        'koiralle': ['koira', 'lle'],
+        'koirakin': ['koira', 'kin'],
+        'kissa': ['kissa'],
+        'kissalle': ['kissa', 'lle'],
+        'hiiri': ['hiiri']
+    }
+
+    def test_identical(self):
+        goldlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            goldlist.add(word, morphs)
+        predlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            predlist.add(word, morphs)
+        pre, rec = bpr(goldlist, predlist)
+        self.assertEqual(pre, 1)
+        self.assertEqual(rec, 1)
+
+    def test_unsegmented(self):
+        goldlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            goldlist.add(word, morphs)
+        predlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            predlist.add(word, [word])
+        pre, rec = bpr(goldlist, predlist)
+        self.assertEqual(pre, 1)
+        self.assertAlmostEqual(rec, 0.42857142)
+
+    def test_all_segmented(self):
+        goldlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            goldlist.add(word, morphs)
+        predlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            predlist.add(word, list(word))
+        pre, rec = bpr(goldlist, predlist)
+        self.assertAlmostEqual(pre, 0.08979591)
+        self.assertEqual(rec, 1)
+
+    def test_example(self):
+        goldlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            goldlist.add(word, morphs)
+        predlist = AnalysisSet()
+        prediction = {
+            'koira': ['koira'],
+            'koiran': ['koira', 'n'],
+            'koiralle': ['koira', 'lle'],
+            'koirakin': ['koira', 'ki', 'n'],
+            'kissa': ['ki', 'ssa'],
+            'kissalle': ['kissa', 'lle'],
+            'hiiri': ['hiiri']
+        }
+        for word, morphs in prediction.items():
+            predlist.add(word, morphs)
+        pre, rec = bpr(goldlist, predlist)
+        self.assertAlmostEqual(pre, 0.78571428)
+        self.assertEqual(rec, 1.0)
+
+    def test_example2(self):
+        goldlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            goldlist.add(word, morphs)
+        goldlist.add('kissassa', ['kissa', 'ssa'])
+        predlist = AnalysisSet()
+        prediction = {
+            'koira': ['koira'],
+            'koiran': ['koira', 'n'],
+            'koiralle': ['koira', 'lle'],
+            'koirakin': ['koira', 'ki', 'n'],
+            'kissa': ['ki', 'ssa'],
+            'kissalle': ['kissa', 'lle'],
+            'hiiri': ['hiiri'],
+            'kissassa': ['ki', 'ssa', 'ssa']
+        }
+        for word, morphs in prediction.items():
+            predlist.add(word, morphs)
+        pre, rec = bpr(goldlist, predlist)
+        self.assertAlmostEqual(pre, 0.75)
+        self.assertEqual(rec, 1.0)
+
+    def test_example3(self):
+        goldlist = AnalysisSet()
+        for word, morphs in self.reference.items():
+            goldlist.add(word, morphs)
+        predlist = AnalysisSet()
+        prediction = {
+            'koira': ['koira'],
+            'koiran': ['koiran'],
+            'koiralle': ['koira', 'lle'],
+            'koirakin': ['koirakin'],
+            'kissa': ['ki', 'ssa'],
+            'kissalle': ['kissa', 'lle'],
+            'hiiri': ['hiiri']
+        }
+        for word, morphs in prediction.items():
+            predlist.add(word, morphs)
+        pre, rec = bpr(goldlist, predlist)
+        self.assertAlmostEqual(pre, 0.85714285)
+        self.assertAlmostEqual(rec, 0.71428571)
