@@ -1,4 +1,4 @@
-# morphometrics - Metrics for morphological analysis and segmentation
+# morphoeval - Evaluation for morphological analysis and segmentation
 
 ## Introduction
 
@@ -33,11 +33,11 @@ precision and recall based on the mapped morphemes.
 
 ## Usage
 
-Installing the package provides a single command, `morphometrics`:
+Installing the package provides a single command, `morphoeval`:
 
 ```
-$ morphometrics --help
-usage: morphometrics [-h] [--metric {comma-b0,comma-b1,emma-2,bpr}] [--verbose]
+$ morphoeval --help
+usage: morphoeval [-h] [--metric {comma-b0,comma-b1,emma-2,bpr}] [--verbose]
                      goldfile predfile [output]
 
 Metrics for morphological analysis and segmentation

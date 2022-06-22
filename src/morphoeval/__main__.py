@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Command-line interface for morphometrics"""
+"""Command-line interface for morphoeval"""
 
 import argparse
 import logging
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main method"""
-    parser = argparse.ArgumentParser(description='Metrics for morphological analysis and segmentation')
+    parser = argparse.ArgumentParser(description='Evaluation for morphological analysis and segmentation')
     parser.add_argument('--metric', '-m', choices=['comma-b0', 'comma-b1', 'emma-2', 'bpr'],
                         default='comma-b0', help='metric (default %(default)s)')
     parser.add_argument('--verbose', '-v', action='store_true', help='increase verbosity')

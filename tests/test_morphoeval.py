@@ -1,8 +1,8 @@
-"""Unit tests for morphometrics"""
+"""Unit tests for morphoeval"""
 
 import unittest
 
-from morphometrics import *
+from morphoeval import *
 
 
 class TestCoMMA(unittest.TestCase):
