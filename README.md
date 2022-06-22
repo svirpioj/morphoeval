@@ -49,8 +49,9 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --metric {comma-b0,comma-b1,emma-2,bpr}, -m {comma-b0,comma-b1,emma-2,bpr}
+  --metric {comma-b0,comma-b1,emma-2,bpr,bpr-s}, -m {comma-b0,comma-b1,emma-2,bpr,bpr-s}
                         metric (default comma-b0)
+  --beta FLOAT          beta for using F_beta score
   --verbose, -v         increase verbosity
 ```
 
@@ -86,7 +87,7 @@ http://morpho.aalto.fi/events/morphochallenge/, but do not work with
 modern Python versions. The current implementation has the following
 limitations compared to the previous scripts:
 
-- BPR and CoMMA versions (CoMMA-S0, CoMMA-S1) with strict matching of
+- CoMMA versions (CoMMA-S0, CoMMA-S1) with strict matching of
   alternative analyses are not implemented.
 - The original EMMA algorithm with one-to-one mapping between
   morphemes is not supported.

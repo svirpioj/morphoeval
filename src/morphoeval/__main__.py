@@ -6,7 +6,7 @@ import logging
 
 import ruamel.yaml
 
-from . import AnalysisSet, comma, emma2, bpr
+from . import AnalysisSet, comma, emma2, bpr, bpr_strict
 
 
 logger = logging.getLogger(__name__)
@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 def main():
     """Main method"""
     parser = argparse.ArgumentParser(description='Evaluation for morphological analysis and segmentation')
-    parser.add_argument('--metric', '-m', choices=['comma-b0', 'comma-b1', 'emma-2', 'bpr'],
+    parser.add_argument('--metric', '-m', choices=['comma-b0', 'comma-b1', 'emma-2', 'bpr', 'bpr-s'],
                         default='comma-b0', help='metric (default %(default)s)')
+    parser.add_argument('--beta', metavar='FLOAT', type=float, default=1, help='beta for using F_beta score')
     parser.add_argument('--verbose', '-v', action='store_true', help='increase verbosity')
     parser.add_argument('goldfile', type=argparse.FileType('r'), help='gold standard analysis file')
     parser.add_argument('predfile', type=argparse.FileType('r'), help='predicted analysis file')
@@ -34,15 +35,23 @@ def main():
         pre, rec = comma(goldlist, predlist, diagonals=True)
     elif args.metric == 'comma-b0':
         pre, rec = comma(goldlist, predlist, diagonals=False)
+    elif args.metric == 'bpr-s':
+        pre, rec = bpr_strict(goldlist, predlist, beta=args.beta)
     else:
         pre, rec = bpr(goldlist, predlist)
-    fscore = 2 * pre * rec / (pre + rec)
-    ruamel_yaml = ruamel.yaml.YAML(typ='safe', pure=True)
-    ruamel_yaml.dump({
+    output = {
         'metric': args.metric,
         'files': {'reference': args.goldfile.name, 'predictions': args.predfile.name},
-        'scores': {'precision': round(pre, 4), 'recall': round(rec, 4), 'f-score': round(fscore, 4)}
-    }, stream=args.output)
+        'scores': {'precision': round(pre, 4), 'recall': round(rec, 4)}
+    }
+    fscore = (1 + args.beta**2) * pre * rec / (args.beta**2 * pre + rec) if pre + rec > 0 else 0
+    if args.beta == 1:
+        output['scores']['f-score'] = round(fscore, 4)
+    else:
+        output['scores']['f_beta-score'] = round(fscore, 4)
+        output['scores']['beta'] = args.beta
+    ruamel_yaml = ruamel.yaml.YAML(typ='safe', pure=True)
+    ruamel_yaml.dump(output, stream=args.output)
 
 
 if __name__ == '__main__':
