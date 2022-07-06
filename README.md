@@ -31,7 +31,7 @@ the morpheme-word graph to make one-to-one or one-to-many assignments
 between the predicted and gold standard morphemes, and calculates the
 precision and recall based on the mapped morphemes.
 
-## The choice of method
+### The choice of method
 
 The choice of the evaluation method should depend on the task at hand
 (segmentation or analysis) and whether the method produces (and the
@@ -44,7 +44,17 @@ discussion.
 | Morphological segmentation | BPR                      | BPR-S                      |
 | Morphological analysis     | EMMA-2, CoMMA-B0         | EMMA-2, CoMMA-S0           |
 
-## Usage
+## Instructions
+
+### Installation
+
+Install the latest release from PyPI:
+* `pip install morphoeval`
+
+Install from source:
+* `pip install .`
+
+### Usage
 
 Installing the package provides a single command, `morphoeval`:
 
