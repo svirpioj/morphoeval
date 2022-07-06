@@ -31,13 +31,26 @@ the morpheme-word graph to make one-to-one or one-to-many assignments
 between the predicted and gold standard morphemes, and calculates the
 precision and recall based on the mapped morphemes.
 
+## The choice of method
+
+The choice of the evaluation method should depend on the task at hand
+(segmentation or analysis) and whether the method produces (and the
+gold standard includes) multiple alternative analyses per word. Here
+are our recommendations; see Virpioja et al. (2011) for further
+discussion.
+
+| Task                       | Single analysis per word | Multiple analyses per word |
+|----------------------------|--------------------------|----------------------------|
+| Morphological segmentation | BPR                      | BPR-S                      |
+| Morphological analysis     | EMMA-2, CoMMA-B0         | EMMA-2, CoMMA-S0           |
+
 ## Usage
 
 Installing the package provides a single command, `morphoeval`:
 
 ```
 $ morphoeval --help
-usage: morphoeval [-h] [--metric {comma-b0,comma-b1,comma-s0,comma-s1,emma-2,bpr}] [--verbose]
+usage: morphoeval [-h] [--metric {comma-b0,comma-b1,comma-s0,comma-s1,emma-2,bpr,bpr-s}] [--verbose]
                      goldfile predfile [output]
 
 Metrics for morphological analysis and segmentation
