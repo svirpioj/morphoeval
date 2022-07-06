@@ -1,154 +1,16 @@
 """Methods for co-occurrence based evaluation"""
 
-import collections
 import logging
 
+import munkres
 import numpy as np
-from scipy.sparse import lil_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 import tqdm
+
+from .common import vector_recall
 
 
 logger = logging.getLogger(__name__)
-
-
-class MorphSeq(list):
-    """Sequence of morphs"""
-
-    def unique(self):
-        """Return unique morphs"""
-        return sorted(self.counts())
-
-    def counts(self):
-        """Return morph counts"""
-        return collections.Counter(self)
-
-    def boundaries(self):
-        """Return boundary vector (0 = no boundary, 1 = boundary)"""
-        vsize = len(''.join(self)) - 1
-        vect = np.zeros(vsize, dtype=int)
-        idx = -1
-        for morph in self:
-            idx += len(morph)
-            if idx < vsize:
-                vect[idx] = 1
-        return vect
-
-
-class AnalysisSet:
-    """Morphological analyses for a set of words"""
-
-    def __init__(self):
-        self.analyses = collections.defaultdict(list)
-        self.morphs = {}
-        self.n_morphs = 0
-
-    def __contains__(self, word):
-        return word in self.analyses
-
-    @classmethod
-    def from_file(cls, inputfile, vocab=None):
-        """Create AnalysisSet from file"""
-        obj = cls()
-        obj.load(inputfile, vocab=vocab)
-        return obj
-
-    def add(self, word, analysis):
-        """Add analysis for a word"""
-        mseq = MorphSeq(analysis)
-        for morph in mseq.unique():
-            if morph not in self.morphs:
-                self.morphs[morph] = self.n_morphs
-                self.n_morphs += 1
-        self.analyses[word].append(mseq)
-
-    def load(self, inputfile, vocab=None):
-        """Load segmentations from given input file object
-
-        Given a container vocab, load only the words found in it.
-
-        """
-        for line in tqdm.tqdm(inputfile):
-            if line[0] == '#':
-                continue
-            word, rest = line.split("\t")
-            if vocab and word not in vocab:
-                continue
-            for alternative in rest.split(', '):
-                self.add(word, alternative.split())
-
-    def get_word_index(self):
-        """Return index for the current set of words"""
-        return {word: idx for idx, word in enumerate(self.analyses)}
-
-    def to_word_morpheme_matrix(self, word_index, selected_alternatives=None, binary=True):
-        """Return bipartite word-morpheme graph as a sparse matrix"""
-        n_words = len(word_index)
-        array = lil_matrix((n_words, self.n_morphs), dtype=int)
-        for word, analyses in tqdm.tqdm(self.analyses.items()):
-            if word not in word_index:
-                continue
-            vec = np.zeros(self.n_morphs)
-            if selected_alternatives:
-                analyses = [analyses[selected_alternatives[word]]]
-            for mseq in analyses:
-                if binary:
-                    for morph in mseq.unique():
-                        vec[self.morphs[morph]] = 1
-                else:
-                    for morph, count in mseq.counts().items():
-                        vec[self.morphs[morph]] += count
-            array[word_index[word], :] = vec
-        return array.tocsr()
-
-    def to_word_matrix(self, word_index, diagonals=False):
-        """Return word graph as a sparse matrix
-
-        Quick but can use a lot of memory.
-
-        """
-        logger.info("Creating word-morpheme matrix")
-        word_morpheme_graph = self.to_word_morpheme_matrix(word_index)
-        logger.info("Creating word-word matrix")
-        word_graph = word_morpheme_graph @ word_morpheme_graph.T
-        if not diagonals:
-            word_graph.setdiag(0)
-        return word_graph
-
-    @staticmethod
-    def common_morphs(analysis1, analysis2):
-        """Return the maximum number of common morphs in two analyses"""
-        max_ = 0
-        for mseq in analysis1:
-            counts1 = mseq.counts()
-            for mseq2 in analysis2:
-                counts2 = mseq2.counts()
-                sum_ = sum(min(counts2[morph], count) for morph, count in counts1.items())
-                max_ = max(sum_, max_)
-        return max_
-
-    def to_word_matrix_direct(self, word_index, diagonals=False):
-        """Return word graph as a sparse matrix
-
-        Memory-efficient but slow.
-
-        """
-        n_words = len(word_index)
-        array = lil_matrix((n_words, n_words), dtype=int)
-        for word, analysis in tqdm.tqdm(self.analyses.items()):
-            if word not in word_index:
-                continue
-            vec = np.zeros(n_words)
-            # logger.debug("%s %s", word, morphset)
-            for word2, analysis2 in self.analyses.items():
-                if word2 not in word_index:
-                    continue
-                if not diagonals and word2 == word:
-                    continue
-                common = self.common_morphs(analysis, analysis2)
-                if common > 0:
-                    vec[word_index[word2]] = common
-            array[word_index[word], :] = vec
-        return array.tocsr()
 
 
 def word_graph_recall(gold, pred):
@@ -174,6 +36,71 @@ def comma(goldlist, predlist, diagonals=False):
     pre = word_graph_recall(pred_word_graph, gold_word_graph)
     logger.info("Calculating recall")
     rec = word_graph_recall(gold_word_graph, pred_word_graph)
+    return pre, rec
+
+
+def strict_comma_eval(gold_sim, pred_sim, beta=1):
+    """Make optimal match for alternative gold and pred analyses and return scores"""
+    logger.debug(pred_sim.toarray().T)
+    logger.debug(gold_sim.toarray().T)
+    gold_altnum = gold_sim.shape[1]
+    pred_altnum = pred_sim.shape[1]
+    if gold_altnum == 1 and pred_altnum == 1:
+        rec_val, rec_nz = vector_recall(gold_sim, pred_sim)
+        pre_val, pre_nz = vector_recall(pred_sim, gold_sim)
+    else:
+        n_max = max(gold_altnum, pred_altnum)
+        recalls = np.zeros((n_max, n_max))
+        precisions = np.zeros((n_max, n_max))
+        costs = np.ones((n_max, n_max))
+        for gold_idx in range(gold_altnum):
+            for pred_idx in range(pred_altnum):
+                rec, rec_nz_t = vector_recall(gold_sim[:, gold_idx], pred_sim[:, pred_idx])
+                pre, pre_nz_t = vector_recall(pred_sim[:, pred_idx], gold_sim[:, gold_idx])
+                if rec_nz_t == 0:
+                    rec = 0
+                if pre_nz_t == 0:
+                    pre = 0
+                fscore = (1 + beta**2) * pre * rec / (beta**2 * pre + rec) if pre + rec > 0 else 0
+                recalls[gold_idx, pred_idx] = rec
+                precisions[gold_idx, pred_idx] = pre
+                costs[gold_idx, pred_idx] = 1 - fscore
+        indexes = munkres.Munkres().compute(costs)
+        if n_max > 1:
+            logger.debug("Costs:\n%s", costs)
+            logger.debug("Matching: %s", indexes)
+        pre_t, rec_t = 0, 0
+        for gold_idx, pred_idx in indexes:
+            pre_t += precisions[gold_idx, pred_idx].item()
+            rec_t += recalls[gold_idx, pred_idx].item()
+        pre_val = pre_t / pred_altnum
+        rec_val = rec_t / gold_altnum
+        rec_nz = (gold_sim.sum(0) > 0).sum()
+        pre_nz = (pred_sim.sum(0) > 0).sum()
+    logger.debug("rec: %s %s", rec_val, rec_nz)
+    logger.debug("pre: %s %s", pre_val, pre_nz)
+    return pre_val, rec_val, pre_nz, rec_nz
+
+
+def comma_strict(goldlist, predlist, diagonals=False, beta=1):
+    """Return precision and recall from CoMMA-S"""
+    word_index = predlist.get_word_index()
+    pre_sum, rec_sum, pre_n, rec_n = 0, 0, 0, 0
+    for word in tqdm.tqdm(predlist.analyses):
+        pred_sim = predlist.word_similarity_matrix(word, word_index, diagonals=diagonals)
+        gold_sim = goldlist.word_similarity_matrix(word, word_index, diagonals=diagonals)
+        logger.debug(word)
+        pre_val, rec_val, pre_nz, rec_nz = strict_comma_eval(gold_sim, pred_sim, beta=beta)
+        if rec_nz > 0:
+            rec_sum += rec_val
+            rec_n += 1
+        if pre_nz > 0:
+            pre_sum += pre_val
+            pre_n += 1
+        logger.debug("rec: %s %s", rec_sum, rec_n)
+        logger.debug("pre: %s %s", pre_sum, pre_n)
+    pre = pre_sum / pre_n if pre_n > 0 else 1.0
+    rec = rec_sum / rec_n if rec_n > 0 else 1.0
     return pre, rec
 
 

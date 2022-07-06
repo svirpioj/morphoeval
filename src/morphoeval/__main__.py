@@ -6,7 +6,8 @@ import logging
 
 import ruamel.yaml
 
-from . import AnalysisSet, comma, emma2, bpr, bpr_strict
+from .common import AnalysisSet
+from . import comma, comma_strict, emma2, bpr, bpr_strict
 
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,8 @@ logger = logging.getLogger(__name__)
 def main():
     """Main method"""
     parser = argparse.ArgumentParser(description='Evaluation for morphological analysis and segmentation')
-    parser.add_argument('--metric', '-m', choices=['comma-b0', 'comma-b1', 'emma-2', 'bpr', 'bpr-s'],
+    parser.add_argument('--metric', '-m',
+                        choices=['comma-b0', 'comma-b1', 'comma-s0', 'comma-s1', 'emma-2', 'bpr', 'bpr-s'],
                         default='comma-b0', help='metric (default %(default)s)')
     parser.add_argument('--beta', metavar='FLOAT', type=float, default=1, help='beta for using F_beta score')
     parser.add_argument('--verbose', '-v', action='store_true', help='increase verbosity')
@@ -35,6 +37,10 @@ def main():
         pre, rec = comma(goldlist, predlist, diagonals=True)
     elif args.metric == 'comma-b0':
         pre, rec = comma(goldlist, predlist, diagonals=False)
+    elif args.metric == 'comma-s1':
+        pre, rec = comma_strict(goldlist, predlist, diagonals=True, beta=args.beta)
+    elif args.metric == 'comma-s0':
+        pre, rec = comma_strict(goldlist, predlist, diagonals=False, beta=args.beta)
     elif args.metric == 'bpr-s':
         pre, rec = bpr_strict(goldlist, predlist, beta=args.beta)
     else:

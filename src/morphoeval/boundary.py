@@ -6,20 +6,10 @@ import munkres
 import numpy as np
 import tqdm
 
+from .common import vector_recall
+
 
 logger = logging.getLogger(__name__)
-
-
-def vector_recall(gold, pred):
-    """Calculate recall from boundary vectors"""
-    if gold.shape != pred.shape:
-        raise ValueError(f"Vectors do not have the same shape: {gold.shape} {pred.shape}")
-    total = gold.sum()
-    if not total:
-        return 1.0
-    diff = gold - pred
-    error = (abs(diff) + diff) / 2
-    return ((gold - error).sum() / total).item()
 
 
 def boundary_recall(gold, predicted):
@@ -41,7 +31,7 @@ def boundary_recall(gold, predicted):
                 best = 1
                 break
             for pred_mseq in predicted.analyses[word]:
-                rec = vector_recall(gold_v, pred_mseq.boundaries())
+                rec, _ = vector_recall(gold_v, pred_mseq.boundaries())
                 if rec > best:
                     best = rec
         total += 1
@@ -68,14 +58,13 @@ def best_strict_boundary_recall(gold_alternatives, pred_alternatives, beta=1):
     costs = np.ones((n_max, n_max))
     for gold_idx, gold_mseq in enumerate(gold_alternatives):
         for pred_idx, pred_mseq in enumerate(pred_alternatives):
-            rec = vector_recall(gold_mseq.boundaries(), pred_mseq.boundaries())
-            pre = vector_recall(pred_mseq.boundaries(), gold_mseq.boundaries())
+            rec, _ = vector_recall(gold_mseq.boundaries(), pred_mseq.boundaries())
+            pre, _ = vector_recall(pred_mseq.boundaries(), gold_mseq.boundaries())
             fscore = (1 + beta**2) * pre * rec / (beta**2 * pre + rec) if pre + rec > 0 else 0
             recalls[gold_idx, pred_idx] = rec
             precisions[gold_idx, pred_idx] = pre
             costs[gold_idx, pred_idx] = 1 - fscore
-    m = munkres.Munkres()
-    indexes = m.compute(costs)
+    indexes = munkres.Munkres().compute(costs)
     if n_max > 1:
         word = ''.join(gold_alternatives[0])
         logger.debug("Costs for word %s:\n%s", word, costs)
