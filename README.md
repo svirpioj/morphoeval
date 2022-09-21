@@ -140,7 +140,7 @@ References as BibTeX:
     month = {August},
     pages = {1029--1037},
     publisher = {Coling 2010 Organizing Committee},
-    title = {{EMMA}: A novel Evaluation Metric for Morphological Analysis},
+    title = {EMMA: A novel Evaluation Metric for Morphological Analysis},
     url = {https://aclanthology.org/C10-1116},
     year = {2010},
 }
